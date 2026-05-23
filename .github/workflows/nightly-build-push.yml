@@ -40,6 +40,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract base image tag
+        id: base-tag
+        run: |
+          TAG=$(grep -E '^FROM' images/${{ matrix.image }}/Dockerfile | tail -1 | sed -E 's/.*:([^ @]+).*/\1/')
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v6
@@ -50,6 +56,7 @@ jobs:
             type=ref,event=pr
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.base-tag.outputs.tag }}
 
       - name: Build and push
         uses: docker/build-push-action@v7

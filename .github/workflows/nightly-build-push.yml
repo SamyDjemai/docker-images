@@ -1,0 +1,64 @@
+name: Nightly Build and Push
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Every night at midnight UTC
+  workflow_dispatch:
+
+jobs:
+  list-images:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: List image directories
+        id: list
+        run: |
+          # Get all subdirectories in images/ that contain a Dockerfile
+          MATRIX=$(ls -d images/*/ | jq -R -s -c 'split("\n") | map(select(. != "")) | map(sub("^images/"; "")) | map(sub("/$]; "")) | .[]')
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+      - name: Set matrix output
+        id: set-matrix
+        run: |
+          # Create JSON array from the directories
+          DIRECTORIES=$(ls -d images/*/ | sed 's|images/||' | sed 's|/$||' | jq -R . | jq -s .)
+          echo "matrix={\"image\": $DIRECTORIES}" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    needs: list-images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJSON(needs.list-images.outputs.matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: images/${{ matrix.image }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

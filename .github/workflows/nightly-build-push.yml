@@ -17,8 +17,9 @@ jobs:
       - name: Set matrix output
         id: set-matrix
         run: |
-          DIRECTORIES=$(ls -d images/*/ | sed 's|images/||' | sed 's|/$||' | jq -R . | jq -s .)
-          echo "matrix={\"image\": $DIRECTORIES}" >> $GITHUB_OUTPUT
+          mapfile -t IMAGES < <(ls -d images/*/ | sed 's|images/||;s|/$||')
+          printf -v JSON '{"image":[%s]}' "$(printf ',"%s"' "${IMAGES[@]}" | cut -c2-)"
+          echo "matrix=$JSON" >> $GITHUB_OUTPUT
 
   build-and-push:
     needs: list-images

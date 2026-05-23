@@ -24,6 +24,8 @@ jobs:
   build-and-push:
     needs: list-images
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     strategy:
       matrix: ${{ fromJSON(needs.list-images.outputs.matrix) }}
     steps:

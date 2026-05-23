@@ -14,17 +14,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: List image directories
-        id: list
-        run: |
-          # Get all subdirectories in images/ that contain a Dockerfile
-          MATRIX=$(ls -d images/*/ | jq -R -s -c 'split("\n") | map(select(. != "")) | map(sub("^images/"; "")) | map(sub("/$]; "")) | .[]')
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-
       - name: Set matrix output
         id: set-matrix
         run: |
-          # Create JSON array from the directories
           DIRECTORIES=$(ls -d images/*/ | sed 's|images/||' | sed 's|/$||' | jq -R . | jq -s .)
           echo "matrix={\"image\": $DIRECTORIES}" >> $GITHUB_OUTPUT
 

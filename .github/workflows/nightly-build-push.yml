@@ -27,6 +27,7 @@ jobs:
     permissions:
       packages: write
     strategy:
+      fail-fast: false
       matrix: ${{ fromJSON(needs.list-images.outputs.matrix) }}
     steps:
       - name: Checkout repository
